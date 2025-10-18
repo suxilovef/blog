@@ -18,10 +18,10 @@ nav:
   fixed: true
 menu:
   首页: / || fas fa-home
-  时间轴: /archives/ || fas fa-archive
+  归档: /archives/ || fas fa-archive
   标签: /tags/ || fas fa-tags
   分类: /categories/ || fas fa-folder-open
-  音乐: /music/ || fas fa-music
+#  音乐: /music/ || fas fa-music
 #  照片: /Gallery/ || fas fa-images
 #  电影: /movies/ || fas fa-video
   友链: /link/ || fas fa-link
@@ -65,7 +65,7 @@ social:
 favicon: /img/favicon.png
 
 avatar:
-  img: /image/favicon.jpg
+  img: /image/头像.jpg
   effect: false
 
 # Disable all banner images
@@ -75,10 +75,10 @@ disable_top_img: false
 default_top_img:
 
 # The banner image of index page
-index_img:
+index_img: /image/top_image/装束壁纸-诺克斯.jpeg
 
 # The banner image of archive page
-archive_img:
+archive_img: /image/top_image/外服2025新年贺图.jpeg
 
 # Note: tag page, not tags page
 tag_img:
@@ -190,7 +190,7 @@ index_layout: 3
 # 3: auto_excerpt (default)
 # false: do not show the article introduction
 index_post_content:
-  method: 3
+  method: 2
   # If you set method to 2 or 3, the length need to config
   length: 500
 
