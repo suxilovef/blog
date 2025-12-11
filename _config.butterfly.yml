@@ -1067,6 +1067,8 @@ inject:
     - <style>#page-header.post-bg{background-size:contain!important;background-repeat:no-repeat;background-position:center}#recent-posts .post_cover img.post-bg{object-fit:contain!important}.article-sort-item-img img{object-fit:contain!important}</style>
   bottom:
     - <script src="/js/raindrops.js"></script>
+    - <script>(function(){var p=location.pathname;if(p==='/'||p==='/index.html'){var a=document.getElementById('music-toggle');if(!a)return;var label=a.querySelector('.label');if(label)label.remove();var i=a.querySelector('i');if(i)i.className='fas fa-music'}})();</script>
+    - <script>(function(){var p=location.pathname;if(p==='/'||p==='/index.html'){var src=encodeURI('/musih/来自过去的SOS - 无期迷途&沐可linda.mp3');var audio=new Audio(src);audio.preload='none';var a=document.createElement('a');a.id='music-toggle';a.href='javascript:void(0)';a.setAttribute('aria-pressed','false');var icon=document.createElement('i');icon.className='fas fa-music';a.appendChild(icon);a.addEventListener('click',function(){if(audio.paused){audio.play();a.setAttribute('aria-pressed','true');icon.className='fas fa-pause'}else{audio.pause();audio.currentTime=0;a.setAttribute('aria-pressed','false');icon.className='fas fa-music'}});var right=document.querySelector('#rightside');if(right){var item=document.createElement('div');item.className='rightside-item rightside-button';item.appendChild(a);right.appendChild(item)}else{a.style.position='fixed';a.style.right='20px';a.style.bottom='120px';a.style.zIndex='9999';document.body.appendChild(a)}}})();</script>
 
 # CDN Settings
 # Don't modify the following settings unless you know how they work
