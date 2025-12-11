@@ -1067,6 +1067,9 @@ inject:
     - <style>#page-header.post-bg{background-size:contain!important;background-repeat:no-repeat;background-position:center}#recent-posts .post_cover img.post-bg{object-fit:contain!important}.article-sort-item-img img{object-fit:contain!important}</style>
   bottom:
     - <script src="/js/raindrops.js"></script>
+    - <script>window.HOME_AUDIO_PLACEMENT='header'</script>
+    - <script src="/js/home-audio.js"></script>
+    - <script>document.addEventListener('DOMContentLoaded',function(){try{if(document.getElementById('site-title')){document.getElementById('site-title').style.display='none'}}catch(e){}})</script>
 
 # CDN Settings
 # Don't modify the following settings unless you know how they work
