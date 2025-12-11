@@ -1,22 +1,27 @@
 ;(function () {
   function isHome() {
+    try {
+      if (window.GLOBAL_CONFIG_SITE && GLOBAL_CONFIG_SITE.pageType === 'home') return true
+    } catch (e) {}
     var p = location.pathname.replace(/index\.html$/, '')
     if (p === '' || p === '/') return true
     if (document.getElementById('recent-posts')) return true
     return false
   }
   function isMobile() {
+    if (window.RAIN_ENABLE_MOBILE === true) return false
     return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
   }
   function createCanvas() {
     var c = document.createElement('canvas')
+    c.id = 'raindrops-canvas'
     c.style.position = 'fixed'
     c.style.top = '0'
     c.style.left = '0'
     c.style.width = '100%'
     c.style.height = '100%'
     c.style.pointerEvents = 'none'
-    c.style.zIndex = '1'
+    c.style.zIndex = '9999'
     document.body.appendChild(c)
     return c
   }
@@ -146,6 +151,7 @@
   function init() {
     if (!isHome()) return
     if (isMobile()) return
+    if (document.getElementById('raindrops-canvas')) return
     var c = createCanvas()
     var r = new Raindrops(c)
     r.start()
@@ -155,5 +161,6 @@
   } else {
     init()
   }
+  document.addEventListener('pjax:complete', init)
 })()
 
