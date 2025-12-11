@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f3e9d7"/>
+      <stop offset="1" stop-color="#e7d9bf"/>
+    </linearGradient>
+    <filter id="grain" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="gamma" amplitude="0.15" exponent="1" offset="0"/>
+      </feComponentTransfer>
+    </filter>
+    <filter id="inkBlur" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+    <linearGradient id="inkGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#1a1a1a"/>
+      <stop offset="1" stop-color="#1a1a1a" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#paper)"/>
+  <rect width="1200" height="630" filter="url(#grain)" opacity="0.18"/>
+  <circle cx="860" cy="270" r="160" fill="none" stroke="#1a1a1a" stroke-width="34" opacity="0.16" filter="url(#inkBlur)"/>
+  <circle cx="860" cy="270" r="148" fill="none" stroke="#1a1a1a" stroke-width="4" opacity="0.28"/>
+  <path d="M120 520 C 240 440, 420 580, 620 520 S 920 520, 1080 540" fill="none" stroke="url(#inkGrad)" stroke-width="3" opacity="0.35"/>
+  <g font-family="'Noto Serif SC','STSong','SimSun','KaiTi','Microsoft YaHei',serif" fill="#1a1a1a">
+    <text x="420" y="200" font-size="164" style="writing-mode:vertical-rl;" letter-spacing="8">无相</text>
+  </g>
+  <g font-family="'Noto Serif SC','STSong','SimSun','KaiTi','Microsoft YaHei',serif" fill="#3b2b19" opacity="0.85">
+    <text x="650" y="360" font-size="28">明心见悟，心流无涯，方寸困渡，念海归一</text>
+    <text x="650" y="400" font-size="28">物观本在，灭情绝性，道溯初本，生源无本</text>
+  </g>
+  <rect x="235" y="410" width="60" height="80" fill="#a0171c" opacity="0.85"/>
+  <g font-family="'Noto Serif SC','STSong','SimSun','KaiTi','Microsoft YaHei',serif" fill="#f6f2ee">
+    <text x="264" y="448" font-size="36" text-anchor="middle" style="writing-mode:vertical-rl;">九方</text>
+  </g>
+</svg>
