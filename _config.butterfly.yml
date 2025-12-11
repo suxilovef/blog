@@ -75,10 +75,10 @@ disable_top_img: false
 default_top_img:
 
 # The banner image of index page
-index_img: /image/top_image/装束壁纸-诺克斯.jpeg
+index_img: /image/top_image/悬城cg6.jpeg
 
 # The banner image of archive page
-archive_img: /image/top_image/外服2025新年贺图.jpeg
+archive_img: /image/top_image/悬城cg6.jpeg
 
 # Note: tag page, not tags page
 tag_img:
@@ -173,9 +173,8 @@ subtitle:
   source: false
   # If you close the typewriter effect, the subtitle will only show the first line of sub
   sub:
-    - 破心方
-    - 剑破尘
-    - 九方
+    - 雨落
+    - 枪响时
 
 # Article layout on the homepage
 # 1: Cover on the left, info on the right
@@ -803,7 +802,7 @@ mask:
 
 # Loading Animation
 preloader:
-  enable: false
+  enable: true
   # source
   # 1. fullpage-loading
   # 2. pace (progress bar)
@@ -861,7 +860,7 @@ activate_power_mode:
 # canvas_ribbon
 # See: https://github.com/hustcc/ribbon.js
 canvas_ribbon:
-  enable: false
+  enable: true
   # The size of ribbon
   size: 150
   # The opacity of ribbon (0 ~ 1)
@@ -897,7 +896,7 @@ fireworks:
 
 # Mouse click effects: Heart symbol
 click_heart:
-  enable: false
+  enable: true
   mobile: false
 
 # Mouse click effects: words
@@ -1065,8 +1064,9 @@ css_prefix: true
 inject:
   head:
     # - <link rel="stylesheet" href="/xxx.css">
+    - <style>#page-header.post-bg{background-size:contain!important;background-repeat:no-repeat;background-position:center}#recent-posts .post_cover img.post-bg{object-fit:contain!important}.article-sort-item-img img{object-fit:contain!important}</style>
   bottom:
-    # - <script src="xxxx"></script>
+    - <script src="/js/raindrops.js"></script>
 
 # CDN Settings
 # Don't modify the following settings unless you know how they work
