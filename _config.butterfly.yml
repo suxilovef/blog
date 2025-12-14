@@ -836,8 +836,8 @@ font:
 
 # Font settings for the site title and site subtitle
 blog_title_font:
-  font_link:
-  font_family:
+  font_link: https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap
+  font_family: '"Ma Shan Zheng","Zhi Mang Xing","KaiTi","STKaiti","Kaiti SC",cursive'
 
 # The setting of divider icon
 hr_icon:
@@ -1065,6 +1065,8 @@ inject:
   head:
     # - <link rel="stylesheet" href="/xxx.css">
     - <style>#page-header.post-bg{background-size:contain!important;background-repeat:no-repeat;background-position:center}#recent-posts .post_cover img.post-bg{object-fit:contain!important}.article-sort-item-img img{object-fit:contain!important}</style>
+    - <style>.nav-site-title .site-name{font-family:"Ma Shan Zheng","Zhi Mang Xing","KaiTi","STKaiti","Kaiti SC",cursive;font-size:30px;font-weight:400;letter-spacing:.02em;transform:skewX(-2deg)}.post-copyright .post-copyright-info a[href="https://suxilovef.github.io"]{font-family:"Ma Shan Zheng","Zhi Mang Xing","KaiTi","STKaiti","Kaiti SC",cursive;font-size:22px;font-weight:400;letter-spacing:.02em}</style>
+    - <style>.footer-other .footer-copyright .copyright{font-family:"Ma Shan Zheng","Zhi Mang Xing","KaiTi","STKaiti","Kaiti SC",cursive;font-size:22px;font-weight:400;letter-spacing:.02em;transform:skewX(-2deg)}</style>
   bottom:
     - <script src="/js/raindrops.js"></script>
     - <script>(function(){var p=location.pathname;if(p==='/'||p==='/index.html'){var a=document.getElementById('music-toggle');if(!a)return;var label=a.querySelector('.label');if(label)label.remove();var i=a.querySelector('i');if(i)i.className='fas fa-music'}})();</script>
