@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" preserveAspectRatio="xMidYMid slice">
+<rect width="1600" height="900" fill="#ffffff"/>
+<g stroke-linecap="round" stroke-width="6" fill="none">
+<path d="M140 220 L720 450" stroke="#0ea5e9"/>
+<path d="M140 680 L720 450" stroke="#8b5cf6"/>
+<path d="M1460 220 L880 450" stroke="#22d3ee"/>
+<path d="M1460 680 L880 450" stroke="#f43f5e"/>
+</g>
+<g fill="#0ea5e9">
+<circle cx="140" cy="220" r="10"/>
+<circle cx="140" cy="680" r="10" fill="#8b5cf6"/>
+<circle cx="1460" cy="220" r="10" fill="#22d3ee"/>
+<circle cx="1460" cy="680" r="10" fill="#f43f5e"/>
+</g>
+<g transform="translate(800,450)">
+<g stroke="#0ea5e9" stroke-width="10" fill="none">
+<path d="M-28 -46 a46 46 0 0 1 56 0 v40" />
+<rect x="-88" y="-6" width="176" height="128" rx="18" />
+<circle cx="0" cy="56" r="12" />
+<path d="M0 56 v30" />
+</g>
+</g>
+</svg>
