@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" preserveAspectRatio="xMidYMid slice">
+<rect width="1600" height="900" fill="#ffffff"/>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M480 640 L640 320 Q720 450 800 520 Q880 450 960 320 L1120 640" stroke="#E11D48" stroke-width="36"/>
+  <path d="M480 640 Q640 720 800 640 Q960 560 1120 640" stroke="#F59E0B" stroke-width="8" opacity="0.85"/>
+  <path d="M520 300 Q640 260 720 320" stroke="#F59E0B" stroke-width="8" opacity="0.6"/>
+  <path d="M880 320 Q960 260 1080 300" stroke="#F59E0B" stroke-width="8" opacity="0.6"/>
+</g>
+<g fill="#E11D48">
+  <circle cx="480" cy="640" r="12"/>
+  <circle cx="1120" cy="640" r="12"/>
+  <circle cx="800" cy="520" r="10"/>
+</g>
+<g font-family="'Segoe UI','Noto Sans','Arial',sans-serif" fill="#111827">
+  <text x="800" y="780" font-size="72" text-anchor="middle" font-weight="700">MyBatis</text>
+</g>
+</svg>

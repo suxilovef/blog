@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" preserveAspectRatio="xMidYMid slice">
+<rect width="1600" height="900" fill="#ffffff"/>
+<g fill="none" stroke-width="8" stroke-linecap="round">
+  <rect x="220" y="300" width="280" height="180" rx="18" stroke="#D32F2F"/>
+  <rect x="1100" y="300" width="280" height="180" rx="18" stroke="#374151"/>
+  <path d="M500 390 C 700 390, 900 390, 1100 390" stroke="#D32F2F"/>
+  <circle cx="800" cy="390" r="28" fill="none" stroke="#D32F2F"/>
+  <path d="M800 418 v70" stroke="#D32F2F"/>
+  <path d="M770 488 h60" stroke="#D32F2F"/>
+  <path d="M800 448 a22 22 0 0 1 22 22" stroke="#D32F2F"/>
+  <path d="M800 448 a22 22 0 0 0 -22 22" stroke="#D32F2F"/>
+</g>
+<g font-family="'Segoe UI','Noto Sans','Arial',sans-serif" fill="#111827">
+  <text x="290" y="392" font-size="44" font-weight="600">SQL</text>
+  <text x="1160" y="392" font-size="44" font-weight="600">POJO</text>
+  <text x="1230" y="452" font-size="22" fill="#6B7280">Mapper</text>
+</g>
+<g font-family="'Segoe UI','Noto Sans','Arial',sans-serif" fill="#D32F2F">
+  <text x="120" y="760" font-size="120" font-weight="700">MyBatis</text>
+</g>
+<g stroke-width="6" stroke="#F59E0B" fill="none" stroke-linecap="round" opacity="0.85">
+  <path d="M250 220 L800 340" />
+  <path d="M1350 220 L800 340" />
+  <path d="M250 680 L800 540" />
+  <path d="M1350 680 L800 540" />
+</g>
+<g fill="#F59E0B">
+  <circle cx="250" cy="220" r="10"/>
+  <circle cx="1350" cy="220" r="10"/>
+  <circle cx="250" cy="680" r="10"/>
+  <circle cx="1350" cy="680" r="10"/>
+</g>
+</svg>
