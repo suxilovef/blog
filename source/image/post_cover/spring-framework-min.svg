@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" preserveAspectRatio="xMidYMid slice">
+  <rect width="1600" height="900" fill="#ffffff"/>
+
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M430 430 C 520 300 640 300 730 430 C 820 560 940 560 1030 430 C 1120 300 1240 300 1330 430" stroke="#6DB33F" stroke-width="34"/>
+    <path d="M470 430 C 545 335 635 335 710 430 C 785 525 875 525 950 430 C 1025 335 1115 335 1190 430" stroke="#34D399" stroke-width="14" opacity="0.9"/>
+
+    <path d="M520 560 Q800 680 1080 560" stroke="#F59E0B" stroke-width="8" opacity="0.85"/>
+    <path d="M590 300 Q720 250 820 300" stroke="#F59E0B" stroke-width="8" opacity="0.55"/>
+    <path d="M780 300 Q900 250 1030 300" stroke="#F59E0B" stroke-width="8" opacity="0.55"/>
+
+    <g transform="translate(800,245)">
+      <path d="M30 6 C -10 -30 -70 -24 -92 18 C -118 64 -82 120 -18 126 C 62 134 118 78 94 28 C 84 8 60 6 30 6 Z" stroke="#6DB33F" stroke-width="12"/>
+      <path d="M-18 98 C 18 80 54 46 78 10" stroke="#34D399" stroke-width="10" opacity="0.9"/>
+      <circle cx="94" cy="28" r="10" fill="#6DB33F"/>
+    </g>
+  </g>
+
+  <g fill="#6DB33F">
+    <circle cx="430" cy="430" r="12"/>
+    <circle cx="1330" cy="430" r="12"/>
+    <circle cx="730" cy="430" r="10" fill="#34D399"/>
+    <circle cx="1030" cy="430" r="10" fill="#34D399"/>
+  </g>
+
+  <g font-family="'Segoe UI','Noto Sans','Arial',sans-serif" fill="#111827">
+    <text x="800" y="790" font-size="88" text-anchor="middle" font-weight="800">Spring</text>
+    <text x="800" y="840" font-size="28" text-anchor="middle" font-weight="600" fill="#6B7280">Java Framework</text>
+  </g>
+</svg>

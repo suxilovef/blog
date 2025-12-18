@@ -8,6 +8,7 @@ tags:
 categories:
   - JAVA
 top_img: false
+cover: /image/post_cover/spring-framework-min.svg
 ---
 
 ## A-00X：SpringApplication
@@ -84,4 +85,3 @@ top_img: false
    3. 筛选匹配当前时间的监听器
    4. 对监听器排序
    5. 缓存匹配结果（原型Bean不缓存，每次获取新实例）
-
