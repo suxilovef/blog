@@ -1,12 +1,18 @@
 ;(function () {
-  function isHome() {
-    try {
-      if (window.GLOBAL_CONFIG_SITE && GLOBAL_CONFIG_SITE.pageType === 'home') return true
-    } catch (e) {}
-    var p = location.pathname.replace(/index\.html$/, '')
-    if (p === '' || p === '/') return true
-    if (document.getElementById('recent-posts')) return true
-    return false
+  function getEnabled() {
+    var v = localStorage.getItem('raindrops-enabled')
+    if (v === null) return true
+    return v === 'true'
+  }
+  function setEnabled(flag) {
+    localStorage.setItem('raindrops-enabled', flag ? 'true' : 'false')
+  }
+  function getIntensity() {
+    var v = localStorage.getItem('raindrops-intensity')
+    return v || 'heavy'
+  }
+  function setIntensity(v) {
+    localStorage.setItem('raindrops-intensity', v)
   }
   function isMobile() {
     if (window.RAIN_ENABLE_MOBILE === true) return false
@@ -55,7 +61,10 @@
     this.ctx.scale(this.dpr, this.dpr)
   }
   Raindrops.prototype.initDrops = function () {
-    var count = Math.max(Math.floor(window.innerWidth / 9), 60)
+    var iLvl = getIntensity()
+    var base = iLvl === 'heavy' ? Math.floor(window.innerWidth / 5) : iLvl === 'light' ? Math.floor(window.innerWidth / 12) : Math.floor(window.innerWidth / 9)
+    var minC = iLvl === 'heavy' ? 120 : iLvl === 'light' ? 40 : 60
+    var count = Math.max(base, minC)
     var i = 0
     this.drops.length = 0
     for (i = 0; i < count; i++) {
@@ -65,12 +74,13 @@
   Raindrops.prototype.spawn = function () {
     var w = window.innerWidth
     var h = window.innerHeight
-    var vy = 1.5 + Math.random() * 3.5
-    var len = 10 + Math.random() * 22
+    var iLvl = getIntensity()
+    var vy = iLvl === 'heavy' ? 3 + Math.random() * 4.5 : iLvl === 'light' ? 1 + Math.random() * 2.5 : 1.5 + Math.random() * 3.5
+    var len = iLvl === 'heavy' ? 16 + Math.random() * 28 : iLvl === 'light' ? 8 + Math.random() * 18 : 10 + Math.random() * 22
     var x = Math.random() * w
     var y = -Math.random() * h
-    var opacity = 0.35 + Math.random() * 0.25
-    var width = 0.8 + Math.random() * 1.6
+    var opacity = iLvl === 'heavy' ? 0.5 + Math.random() * 0.3 : iLvl === 'light' ? 0.3 + Math.random() * 0.2 : 0.35 + Math.random() * 0.25
+    var width = iLvl === 'heavy' ? 1.2 + Math.random() * 1.6 : iLvl === 'light' ? 0.7 + Math.random() * 1.2 : 0.8 + Math.random() * 1.6
     var vx = this.windBase + (Math.random() - 0.5) * this.windVar
     return { x: x, y: y, vx: vx, vy: vy, len: len, opacity: opacity, width: width }
   }
@@ -81,14 +91,14 @@
     for (var i = 0; i < this.drops.length; i++) {
       var d = this.drops[i]
       var wind = this.windBase + Math.sin(this.time * 0.002) * this.windVar
-      d.vy += this.gravity
+      d.vy += getIntensity() === 'heavy' ? 0.25 : this.gravity
       d.vx = wind
       d.x += d.vx
       d.y += d.vy
       if (d.x > w + 20) d.x = -20
       else if (d.x < -20) d.x = w + 20
       if (d.y - d.len > h) {
-        this.splashes.push({ x: d.x, y: h - 2, r: 0, alpha: 0.5 + Math.random() * 0.2, growth: 0.9 + Math.random() * 0.6 })
+        this.splashes.push({ x: d.x, y: h - 2, r: 0, alpha: 0.6 + Math.random() * 0.2, growth: getIntensity() === 'heavy' ? 1.4 + Math.random() * 0.8 : 0.9 + Math.random() * 0.6 })
         this.drops[i] = this.spawn()
       }
     }
@@ -96,7 +106,7 @@
       var s = this.splashes[j]
       s.r += s.growth
       s.alpha *= 0.92
-      if (s.alpha < 0.02 || s.r > 18) this.splashes.splice(j, 1)
+      if (s.alpha < 0.02 || s.r > (getIntensity() === 'heavy' ? 26 : 18)) this.splashes.splice(j, 1)
     }
   }
   Raindrops.prototype.draw = function () {
@@ -127,7 +137,7 @@
     for (var j = 0; j < this.splashes.length; j++) {
       var s = this.splashes[j]
       ctx.strokeStyle = 'rgba(180, 180, 200,' + s.alpha + ')'
-      ctx.lineWidth = 1
+      ctx.lineWidth = getIntensity() === 'heavy' ? 1.4 : 1
       ctx.beginPath()
       ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2)
       ctx.stroke()
@@ -149,12 +159,55 @@
     this.running = false
   }
   function init() {
-    if (!isHome()) return
+    var enabled = getEnabled()
     if (isMobile()) return
-    if (document.getElementById('raindrops-canvas')) return
-    var c = createCanvas()
-    var r = new Raindrops(c)
-    r.start()
+    var existing = document.getElementById('raindrops-canvas')
+    if (enabled) {
+      if (existing) return
+      var c = createCanvas()
+      var r = new Raindrops(c)
+      r.start()
+      window.RAINDROPS_INSTANCE = r
+    } else {
+      if (existing) {
+        try {
+          existing.parentNode.removeChild(existing)
+        } catch (e) {}
+      }
+    }
+  }
+  window.RAINDROPS = {
+    enable: function () {
+      setEnabled(true)
+      init()
+    },
+    disable: function () {
+      setEnabled(false)
+      var existing = document.getElementById('raindrops-canvas')
+      if (existing) {
+        try {
+          existing.parentNode.removeChild(existing)
+        } catch (e) {}
+      }
+      if (window.RAINDROPS_INSTANCE) {
+        try {
+          window.RAINDROPS_INSTANCE.stop()
+        } catch (e) {}
+        window.RAINDROPS_INSTANCE = null
+      }
+    },
+    toggle: function () {
+      if (getEnabled()) this.disable()
+      else this.enable()
+    },
+    isEnabled: function () {
+      return getEnabled()
+    },
+    setIntensity: function (level) {
+      if (!level || !/^(heavy|normal|light)$/.test(level)) return
+      setIntensity(level)
+      init()
+    }
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init)

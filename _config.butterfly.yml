@@ -75,10 +75,10 @@ disable_top_img: false
 default_top_img:
 
 # The banner image of index page
-index_img: /image/top_image/悬城cg6.jpeg
+index_img: /image/top_image/悬城cg6-new.jpg
 
 # The banner image of archive page
-archive_img: /image/top_image/悬城cg6.jpeg
+archive_img: /image/top_image/悬城cg6-new.jpg
 
 # Note: tag page, not tags page
 tag_img:
@@ -1069,8 +1069,7 @@ inject:
     - <style>.footer-other .footer-copyright .copyright{font-family:"Ma Shan Zheng","Zhi Mang Xing","KaiTi","STKaiti","Kaiti SC",cursive;font-size:22px;font-weight:400;letter-spacing:.02em;transform:skewX(-2deg)}</style>
   bottom:
     - <script src="/js/raindrops.js"></script>
-    - <script>(function(){var p=location.pathname;if(p==='/'||p==='/index.html'){var a=document.getElementById('music-toggle');if(!a)return;var label=a.querySelector('.label');if(label)label.remove();var i=a.querySelector('i');if(i)i.className='fas fa-music'}})();</script>
-    - <script>(function(){var p=location.pathname;if(p==='/'||p==='/index.html'){var src=encodeURI('/musih/来自过去的SOS - 无期迷途&沐可linda.mp3');var audio=new Audio(src);audio.preload='none';var a=document.createElement('a');a.id='music-toggle';a.href='javascript:void(0)';a.setAttribute('aria-pressed','false');var icon=document.createElement('i');icon.className='fas fa-music';a.appendChild(icon);a.addEventListener('click',function(){if(audio.paused){audio.play();a.setAttribute('aria-pressed','true');icon.className='fas fa-pause'}else{audio.pause();audio.currentTime=0;a.setAttribute('aria-pressed','false');icon.className='fas fa-music'}});var right=document.querySelector('#rightside');if(right){var item=document.createElement('div');item.className='rightside-item rightside-button';item.appendChild(a);right.appendChild(item)}else{a.style.position='fixed';a.style.right='20px';a.style.bottom='120px';a.style.zIndex='9999';document.body.appendChild(a)}}})();</script>
+    - <script>(function(){var right=document.querySelector('#rightside');function addItem(el){if(right){var item=document.createElement('div');item.className='rightside-item rightside-button';item.appendChild(el);right.appendChild(item)}else{el.style.position='fixed';el.style.right='20px';el.style.bottom='120px';el.style.zIndex='9999';document.body.appendChild(el)}}(function(){var rain=document.createElement('a');rain.id='rain-toggle';rain.href='javascript:void(0)';rain.setAttribute('aria-pressed',String((window.RAINDROPS&&window.RAINDROPS.isEnabled&&window.RAINDROPS.isEnabled())||false));var ri=document.createElement('i');ri.className='fas fa-cloud';rain.appendChild(ri);rain.title='雨滴特效';rain.addEventListener('click',function(){if(!window.RAINDROPS||!window.RAINDROPS.toggle)return;window.RAINDROPS.toggle();var on=window.RAINDROPS.isEnabled&&window.RAINDROPS.isEnabled();rain.setAttribute('aria-pressed',String(!!on));ri.className=on?'fas fa-cloud':'fas fa-cloud'});addItem(rain)})();(function(){var p=location.pathname;if(p==='/'||p==='/index.html'){var audio=new Audio(encodeURI('/musih/来自过去的SOS - 无期迷途&沐可linda.mp3'));audio.preload='none';var a=document.createElement('a');a.id='music-toggle';a.href='javascript:void(0)';a.setAttribute('aria-pressed','false');var icon=document.createElement('i');icon.className='fas fa-music';a.appendChild(icon);a.title='音乐播放';a.addEventListener('click',function(){if(audio.paused){audio.play();a.setAttribute('aria-pressed','true');icon.className='fas fa-pause'}else{audio.pause();audio.currentTime=0;a.setAttribute('aria-pressed','false');icon.className='fas fa-music'}});addItem(a)}})();})();</script>
 
 # CDN Settings
 # Don't modify the following settings unless you know how they work
