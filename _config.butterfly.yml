@@ -173,8 +173,8 @@ subtitle:
   source: false
   # If you close the typewriter effect, the subtitle will only show the first line of sub
   sub:
-    - 雨落
-    - 枪响时
+#    - 雨落
+#    - 枪响时
 
 # Article layout on the homepage
 # 1: Cover on the left, info on the right
