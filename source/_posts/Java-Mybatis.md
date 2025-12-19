@@ -1,12 +1,12 @@
 ---
-title: JAVA-MYBATIS
+title: Java-Mybatis
 date: 2025-12-15 21:34:12
-description: JAVA-MYBATIS 框架
+description: Java-Mybatis 框架
 tags:
-  - JAVA
-  - MYBATIS
+  - Java
+  - Mybatis
 categories:
-  - JAVA
+  - Java
 top_img: false
 cover: /image/post_cover/java-mybatis-min2.svg
 ---

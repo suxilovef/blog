@@ -1,12 +1,12 @@
 ---
-title: JAVA-JUC
+title: Java-Juc
 date: 2025-12-14 15:23:48
-description: JAVA-JUC 并发
+description: Java-Juc 并发
 tags:
-    - JAVA
-    - JUC
+    - Java
+    - Juc
 categories:
-    - JAVA
+    - Java
 top_img: false
 cover: /image/post_cover/java-juc-concurrency-min.svg
 ---

@@ -1,12 +1,12 @@
 ---
-title: Spring
+title: Java-Spring
 date: 2025-12-18 20:07:05
-description: Spring 框架
+description: Java-Spring 框架
 tags:
-  - JAVA
+  - Java
   - Spring
 categories:
-  - JAVA
+  - Java
 top_img: false
 cover: /image/post_cover/spring-framework-min.svg
 ---
