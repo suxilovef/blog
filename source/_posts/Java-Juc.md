@@ -63,6 +63,55 @@ JVM层面
    5. 批量撤销：当撤销偏向锁阈值超过40次之后，jvm会将整个类的所有对象变为不可偏向，新建的对象也是不可偏向的
    6. 锁消除
 
+### B-002：Wait/Notify
+
+#### **原理：**
+
+1. Owner线程发现条件不满足，调用wait方法，即可进入WaitSet变为Waiting状态
+2. Blocked和Waiting的线程都处于阻塞状态，不占用CPU时间片
+3. Blocked线程会在Owner线程释放锁时唤醒
+4. Waiting线程会在Owner线程调用Notify或NotifyAll时唤醒，但唤醒后并不意味着立刻获得锁，仍需进入EntryList重新竞争
+
+#### **使用：**
+
+1. sleep(long n)与wait(long n)的区别
+
+   1. sleep是Thread的方法，而wait是Object的方法
+   2. sleep不需要强制和synchronized配合使用，但wait需要和synchronized一起使用
+   3. sleep在睡眠的同时，不会释放对象锁，但wait在等待的时候会释放对象锁
+   4. 状态都是timed_waiting（无参数的wait是waiting）
+
+2. 常用写法
+
+   1. ```java
+      synchronized(lock){
+          while(条件不成立){
+              lock.wait();
+          }
+      }
+      
+      synchronized(lock){
+          lock.notifyAll();
+      }
+      ```
+
+### B-003：同步模式
+
+#### **保护性暂停**
+
+1. 定义：
+   1. 有一个结果需要从一个线程传递到另一个线程，让他们关联同一个GuardedObject
+   2. 如果有结果不断从一个线程到另一个线程那么可是使用消息队列（剑生产者/消费者）
+   3. JDK中，join的实现、Future的实现
+2. 本质：引入第三者
+3. 对比join：优于join
+4. 04050
+5. 
+
+
+
+
+
 
 
 

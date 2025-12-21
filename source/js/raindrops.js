@@ -105,8 +105,9 @@
     for (var j = this.splashes.length - 1; j >= 0; j--) {
       var s = this.splashes[j]
       s.r += s.growth
-      s.alpha *= 0.92
-      if (s.alpha < 0.02 || s.r > (getIntensity() === 'heavy' ? 26 : 18)) this.splashes.splice(j, 1)
+      s.alpha *= s.decay !== undefined ? s.decay : 0.92
+      var mr = s.maxR !== undefined ? s.maxR : getIntensity() === 'heavy' ? 26 : 18
+      if (s.alpha < 0.02 || s.r > mr) this.splashes.splice(j, 1)
     }
   }
   Raindrops.prototype.draw = function () {
@@ -134,13 +135,39 @@
     }
     ctx.restore()
     ctx.save()
+    ctx.globalCompositeOperation = 'screen'
     for (var j = 0; j < this.splashes.length; j++) {
       var s = this.splashes[j]
-      ctx.strokeStyle = 'rgba(180, 180, 200,' + s.alpha + ')'
-      ctx.lineWidth = getIntensity() === 'heavy' ? 1.4 : 1
-      ctx.beginPath()
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2)
-      ctx.stroke()
+      if (s.kind === 'click') {
+        var lw = s.lw !== undefined ? s.lw : getIntensity() === 'heavy' ? 2.2 : 1.6
+        ctx.shadowColor = 'rgba(200, 220, 255,' + Math.max(s.alpha * 0.6, 0) + ')'
+        ctx.shadowBlur = 10
+        ctx.strokeStyle = 'rgba(210, 225, 255,' + Math.max(s.alpha * 0.9, 0) + ')'
+        ctx.lineWidth = lw
+        ctx.beginPath()
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2)
+        ctx.stroke()
+        ctx.shadowBlur = 6
+        ctx.strokeStyle = 'rgba(210, 225, 255,' + Math.max(s.alpha * 0.5, 0) + ')'
+        ctx.lineWidth = Math.max(lw * 0.7, 1)
+        ctx.beginPath()
+        ctx.arc(s.x, s.y, s.r * 1.15, 0, Math.PI * 2)
+        ctx.stroke()
+        var rg = ctx.createRadialGradient(s.x, s.y, Math.max(s.r * 0.1, 1), s.x, s.y, s.r)
+        rg.addColorStop(0, 'rgba(220, 230, 255,' + Math.max(s.alpha * 0.08, 0) + ')')
+        rg.addColorStop(1, 'rgba(220, 230, 255, 0)')
+        ctx.fillStyle = rg
+        ctx.beginPath()
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.shadowBlur = 0
+      } else {
+        ctx.strokeStyle = 'rgba(180, 180, 200,' + s.alpha + ')'
+        ctx.lineWidth = getIntensity() === 'heavy' ? 1.4 : 1
+        ctx.beginPath()
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2)
+        ctx.stroke()
+      }
     }
     ctx.restore()
   }
@@ -215,5 +242,20 @@
     init()
   }
   document.addEventListener('pjax:complete', init)
+  document.addEventListener('click', function (e) {
+    if (!window.RAINDROPS_INSTANCE) return
+    if (isMobile()) return
+    var level = getIntensity()
+    var g =
+      level === 'heavy'
+        ? 1.3 + Math.random() * 0.5
+        : level === 'light'
+        ? 0.8 + Math.random() * 0.4
+        : 1 + Math.random() * 0.4
+    var mr = level === 'heavy' ? 64 : level === 'light' ? 42 : 52
+    var decay = level === 'heavy' ? 0.965 : level === 'light' ? 0.97 : 0.968
+    var lw = level === 'heavy' ? 2.4 : level === 'light' ? 1.6 : 1.9
+    window.RAINDROPS_INSTANCE.splashes.push({ x: e.clientX, y: e.clientY, r: 0, alpha: 0.95, growth: g, kind: 'click', maxR: mr, decay: decay, lw: lw })
+  })
 })()
 
