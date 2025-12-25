@@ -11,77 +11,298 @@ top_img: false
 cover: /image/post_cover/spring-framework-min.svg
 ---
 
+**SpringBoot：2.7.18**
+
+**文档版本：GIT**：迭代
+
 ## A-00X：SpringApplication
 
-**流程分析**
+### B-001：前言
 
-1. SpringApplication构造
-   1. 保存启动类信息
-   2. 初始化环境
-   3. 加载*spring.factories*设置*ApplicationContextInitializer*
-   4. 加载*spring.factories*设置监听器
-   5. 设置启动类信息
-2. SpringApplication#run
-   1. 加载 *spring.factories* 获取Spring监听器
-   2. 构造容器环境
-   3. 创建上下文对象
-   4. 准备刷新上下文
-   5. 刷新上下文
-   6. 结束刷新
-   7. 容器成功创建
+SpringBoot执行流程
 
-## A-00X：Spring-Event
+### B-002：调试
 
-### B-001：分析
+```java
+@SpringBootApplication
+public class B01Application {
+    public static void main(String[] args) {
+        ConfigurableApplicationContext context = SpringApplication.run(B01Application.class, args);
+    }
+}
+```
 
-1. 要素：事件源，事件，事件发布器，事件广播器，事件监听器
+```java
+public class B0102Application {
+    public static void main(String[] args) throws Exception {
+        // 获取BeanDefinition源
+        SpringApplication springApplication = new SpringApplication(B0102Application.class);
+        springApplication.setSources(Set.of(""));
+        // 推断应用程序类型
+        Method deduceFromClasspath = WebApplicationType.class.getDeclaredMethod("deduceFromClasspath");
+        deduceFromClasspath.setAccessible(true);
+        Object invoke = deduceFromClasspath.invoke(null);
+        // 添加引导上下文扩展
+        springApplication.addBootstrapRegistryInitializer(registry -> {
 
-#### **事件广播器**
+        });
+        // 添加应用主上下文扩展
+        springApplication.addInitializers(applicationContext -> {
 
-1. 定位： *Spring Event* 中心
-2. 前提条件： *BeanDefinition load finish*
-3. 初始化时机： *ApplicationContext#refresh->#initApplicationEventMulticaster*
+        });
+        // 添加应用事件监听器
+        springApplication.addListeners(event -> {
 
-#### **事件监听器**
+        });
+        ConfigurableApplicationContext context = springApplication.run(args);
+        
+    }
+}
+```
 
-1. 分类：Bean类型监听器，非Bean类型监听器
-2. 注册 *ApplicationListener* 到 *ApplicationEventMulticaster*
-   1. 前提条件：*ApplicationEventMulticaster init finish*
-   2. 执行时机：*ApplicationContext#refresh->#registerListeners*
-   3. 初始化非Bean类型监听器至 *ApplicationEventMulticaster*
-   4. 初始化Bean类型监听器至 *ApplicationEventMulticaster*
-   5. *ApplicationListenerDetector* 保证特殊 *ApplicationListener* 正确注册进 *ApplicationEventMulticaster*
-3. 非Bean类型监听器
-   1. *AbstractApplicationContext.applicationListeners*
-   2. 类型
-      1. 容器内置的核心监听器：Spring容器自身会在初始化时，手动实例化并添加一批内置监听器，用于处理容器生命周期事件，无需BeanFactory管理：属于容器级别，作为容器启动的基础组件
-      2. 开发者手动调用API添加的监视器
-      3. SPI加载的监听器：扩展点：示例：Spring Boot *META-INF/spring.factories*，加载时机 *SpringApplication#constructor*
-4. Bean类型监听器
-   1. 实现方式：接口、注解
-5. ApplicationListenerDetector
-   1. Spring中有些Bean的创建/初始化时机可能晚于 *ApplicationContext#refresh->#registerListeners* 
-   2. 具体场景（错过核心自动注册流程）
-      1. 懒加载单例Bean：实例化延迟到「第一次 `getBean()`」时，而 `registerListeners()` 阶段仅注册了「Bean 名称」到广播器，若事件触发时 Bean 尚未实例化，可能出现「监听器未生效」（或实例化后未被广播器感知）。
-      2. 原型Bean：`registerListeners()` 阶段仅注册「原型 Bean 的名称」到广播器，事件广播器每次触发事件时会 `getBean()` 获取新实例
-         1. 若原型 Bean 未被 `getBean()` 过，事件触发时才生成实例，可能错过早期事件；
-         2. 若开发者手动 `getBean()` 生成原型实例，该实例不会被核心流程识别，无法注册到广播器。
-      3. BeanFactoryPostProcessor 动态生成Bean
-         1. 在 `refresh()` 的 `invokeBeanFactoryPostProcessors()` 阶段（早于 `registerListeners()`），用于修改 / 新增 `BeanDefinition`；
-         2. 若 BFPP 动态生成 `ApplicationListener` 的 `BeanDefinition` 时存在「延迟 / 不完整」（比如 BFPP 执行顺序靠后），`registerListeners()` 阶段的 `getBeanNamesForType()` 扫描可能漏扫该 BeanDefinition，导致核心流程完全无法识别。
-      4. 手动创建的Bean
-      5. 后置添加的Bean
-   3. 本质上：Spring 核心流程是「提前扫描 BeanDefinition + 延迟实例化」的被动模式，而 `ApplicationListenerDetector` 是「实例化后主动检测 + 即时注册」的主动模式，覆盖所有「Bean 实例化时机脱离核心流程窗口期」的场景，确保所有 `ApplicationListener` 类型的 Bean 都能被正确注册。
 
-#### **事件广播器-事件监听器**
 
-1. 执行时机：*context.publishEvent*
-2. 获取监听器
-   1. 解析事件类型
-   2. 获取所有候选监听器（合并两类监听器）
-      1. Bean类型监听器如果没被实例化：仅在首次触发匹配事件时才通过 `beanFactory.getBean()` 获取实例；（TODO）
-      2. 懒加载单例 Bean / 原型 Bean：此时才会触发实例化（原型 Bean 每次获取都是新实例）；
-      3. 若 Bean 已被销毁 / 移除，会捕获 `NoSuchBeanDefinitionException` 并忽略。
-   3. 筛选匹配当前时间的监听器
-   4. 对监听器排序
-   5. 缓存匹配结果（原型Bean不缓存，每次获取新实例）
+### B-003：源码解析
+
+#### SpringApplication
+
+```java
+public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySources) {
+    this.resourceLoader = resourceLoader;
+    Assert.notNull(primarySources, "PrimarySources must not be null");
+    // 获取源：主源
+    this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources));
+    // 推断应用程序类型：根据类路径下是否存在某些特殊类来判断
+    this.webApplicationType = WebApplicationType.deduceFromClasspath();
+    // SPI机制加载：BootstrapRegistryInitializer（引导上下文扩展）
+    this.bootstrapRegistryInitializers = new ArrayList<>(
+        getSpringFactoriesInstances(BootstrapRegistryInitializer.class));
+    // SPI机制加载：ApplicationContextInitializer（应用主上下文扩展）
+    setInitializers((Collection) getSpringFactoriesInstances(ApplicationContextInitializer.class));
+    // SPI机制加载：ApplicationListener（应用事件监听器）
+    setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class));
+    // 推断主类
+    this.mainApplicationClass = deduceMainApplicationClass();
+}
+```
+
+#### SpringApplication#run
+
+```java
+public ConfigurableApplicationContext run(String... args) {
+    long startTime = System.nanoTime();
+    // 创建引导上下文：执行引导上下文扩展
+    DefaultBootstrapContext bootstrapContext = createBootstrapContext();
+    ConfigurableApplicationContext context = null;
+    configureHeadlessProperty();
+    // 创建：SpringApplicationRunListeners（事件发布器组合）：SPI机制加载SpringApplicationRunListener（事件发布器）
+    SpringApplicationRunListeners listeners = getRunListeners(args);
+    // 发布：ApplicationStartingEvent
+    listeners.starting(bootstrapContext, this.mainApplicationClass);
+    try {
+        // 解析命令行：ApplicationArguments
+        ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
+        // 准备环境
+        ConfigurableEnvironment environment = prepareEnvironment(listeners, bootstrapContext, applicationArguments);
+        configureIgnoreBeanInfo(environment);
+        Banner printedBanner = printBanner(environment);
+        // 创建容器
+        context = createApplicationContext();
+        context.setApplicationStartup(this.applicationStartup);
+        // 准备容器：调用ApplicationContextInitializer（对context增强）、加载BeanDefinition
+        prepareContext(bootstrapContext, context, environment, listeners, applicationArguments, printedBanner);
+        // 刷新容器：
+        refreshContext(context);
+        afterRefresh(context, applicationArguments);
+        Duration timeTakenToStartup = Duration.ofNanos(System.nanoTime() - startTime);
+        if (this.logStartupInfo) {
+            new StartupInfoLogger(this.mainApplicationClass).logStarted(getApplicationLog(), timeTakenToStartup);
+        }
+        listeners.started(context, timeTakenToStartup);
+        // 执行runner：扩展：业务可能需要：执行两类：ApplicationRunner、CommandLineRunner
+        callRunners(context, applicationArguments);
+    }
+    catch (Throwable ex) {
+        handleRunFailure(context, ex, listeners);
+        throw new IllegalStateException(ex);
+    }
+    try {
+        Duration timeTakenToReady = Duration.ofNanos(System.nanoTime() - startTime);
+        listeners.ready(context, timeTakenToReady);
+    }
+    catch (Throwable ex) {
+        handleRunFailure(context, ex, null);
+        throw new IllegalStateException(ex);
+    }
+    return context;
+}
+```
+
+### B-004：扩展源码解析
+
+#### C-00X：getRunListeners(args)
+
+##### SpringApplicationRunListeners
+
+```java
+class SpringApplicationRunListeners {
+    // 类设计思路：
+    // 封装发布器集合，便于上层调用；集成ApplicationStartup，性能分析；
+    // 单独处理
+    private final Log log;
+    // 事件发布器集合
+    private final List<SpringApplicationRunListener> listeners;
+
+    private final ApplicationStartup applicationStartup;
+
+    SpringApplicationRunListeners(Log log, Collection<? extends SpringApplicationRunListener> listeners,
+                                  ApplicationStartup applicationStartup) {
+        this.log = log;
+        this.listeners = new ArrayList<>(listeners);
+        this.applicationStartup = applicationStartup;
+    }
+
+    void starting(ConfigurableBootstrapContext bootstrapContext, Class<?> mainApplicationClass) {
+        doWithListeners("spring.boot.application.starting", (listener) -> listener.starting(bootstrapContext),
+                        (step) -> {
+                            if (mainApplicationClass != null) {
+                                step.tag("mainApplicationClass", mainApplicationClass.getName());
+                            }
+                        });
+    }
+    
+    // ......
+    private void doWithListeners(String stepName, Consumer<SpringApplicationRunListener> listenerAction) {
+        doWithListeners(stepName, listenerAction, null);
+    }
+
+    private void doWithListeners(String stepName, Consumer<SpringApplicationRunListener> listenerAction,
+                                 Consumer<StartupStep> stepAction) {
+        StartupStep step = this.applicationStartup.start(stepName);
+        this.listeners.forEach(listenerAction);
+        if (stepAction != null) {
+            stepAction.accept(step);
+        }
+        step.end();
+    }
+
+}
+```
+
+##### EventPublishingRunListener
+
+```java
+public class EventPublishingRunListener implements SpringApplicationRunListener, Ordered {
+
+    private final SpringApplication application;
+
+    private final String[] args;
+    // 临时事件广播器
+    private final SimpleApplicationEventMulticaster initialMulticaster;
+
+    public EventPublishingRunListener(SpringApplication application, String[] args) {
+        this.application = application;
+        this.args = args;
+        this.initialMulticaster = new SimpleApplicationEventMulticaster();
+        for (ApplicationListener<?> listener : application.getListeners()) {
+            this.initialMulticaster.addApplicationListener(listener);
+        }
+    }
+
+    @Override
+    public int getOrder() {
+        return 0;
+    }
+
+    @Override
+    public void starting(ConfigurableBootstrapContext bootstrapContext) {
+        this.initialMulticaster
+            .multicastEvent(new ApplicationStartingEvent(bootstrapContext, this.application, this.args));
+    }
+}
+```
+
+##### SimpleApplicationEventMulticaster
+
+临时事件广播器：ApplicationEventMulticaster：TODO
+
+#### C-00X：prepareEnvironment
+
+**关键类**：
+
+**ApplicationEnvironmentPreparedEvent；EnvironmentPostProcessorApplicationListener；EnvironmentPostProcessor；ApplicationServletEnvironment**
+
+```java
+private ConfigurableEnvironment prepareEnvironment(SpringApplicationRunListeners listeners,
+                                                   DefaultBootstrapContext bootstrapContext, ApplicationArguments applicationArguments) {
+    // Create and configure the environment
+    // 根据applicationType获取或创建ConfigurableEnvironment：SERVLET 默认ApplicationServletEnvironment
+    ConfigurableEnvironment environment = getOrCreateEnvironment();
+    // 讲main函数的args封装成SimpleCommandLinePropertySource加入到环境中
+    // 根据SimpleCommandLinePropertySource激活响应的配置文件（TODO：这是一个空方法）
+    configureEnvironment(environment, applicationArguments.getSourceArgs());
+    // 将Spring支持的原生环境Environment适配成SpringBoot的ConfigurationPropertySource，让@ConfigurationProperties可以工作
+    ConfigurationPropertySources.attach(environment);
+    // 发布基础环境准备好事件:ApplicationEnvironmentPreparedEvent：触发EnvironmentPostProcessorApplicationListener
+    // SPI机制加载EnvironmentPostProcessor
+    // 执行EnvironmentPostProcessor（扩展点）自定义扩展实现方式：SPI机制
+    listeners.environmentPrepared(bootstrapContext, environment);
+    // SpringBoot 内置的PropertySource实现，优先级调整至最低；（不分析此方法）
+    DefaultPropertiesPropertySource.moveToEnd(environment);
+    Assert.state(!environment.containsProperty("spring.main.environment-prefix"),
+                 "Environment prefix cannot be set via properties.");
+    bindToSpringApplication(environment);
+    // 判断用户是否手动设置了Environment；SpringBoot支持自定义Environment
+    if (!this.isCustomEnvironment) {
+        // 环境类型转换器
+        EnvironmentConverter environmentConverter = new EnvironmentConverter(getClassLoader());
+        // 根据应用运行场景推断环境类型，并使用环境转换器转换
+        environment = environmentConverter.convertEnvironmentIfNecessary(environment, deduceEnvironmentClass());
+    }
+    // 上一步可能替换掉Environment实例，因此重新适配
+    ConfigurationPropertySources.attach(environment);
+    return environment;
+}
+```
+
+#### C-00X：context = createApplicationContext();
+
+**创建应用上下文**
+
+**SERVLET：AnnotationConfigServletWebServerApplicationContext**
+
+```java
+public class AnnotationConfigServletWebServerApplicationContext extends ServletWebServerApplicationContext
+    implements AnnotationConfigRegistry {
+    public AnnotationConfigServletWebServerApplicationContext() {
+        this.reader = new AnnotatedBeanDefinitionReader(this);
+        this.scanner = new ClassPathBeanDefinitionScanner(this);
+    }
+}
+```
+
+```java
+public AnnotatedBeanDefinitionReader(BeanDefinitionRegistry registry, Environment environment) {
+    Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
+    Assert.notNull(environment, "Environment must not be null");
+    this.registry = registry;
+    this.conditionEvaluator = new ConditionEvaluator(registry, environment, null);
+    // SPI机制注册下面类型Bean定义
+    // ConfigurationClassPostProcessor AutowiredAnnotationBeanPostProcessor
+    // CommonAnnotationBeanPostProcessor
+    // EventListenerMethodProcessor
+    // DefaultEventListenerFactory
+    AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
+}
+```
+
+
+
+## A-00X：BeanFactoryPostProcessor
+
+## A-00X：**DefaultListableBeanFactory**
+
+```
+
+```
+
