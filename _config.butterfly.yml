@@ -38,7 +38,7 @@ menu:
 
 code_blocks:
   # Code block theme: darker / pale night / light / ocean / false
-  theme: light
+  theme: pale night
   macStyle: false
   # Code block height limit (unit: px)
   height_limit: 381
@@ -55,7 +55,7 @@ code_blocks:
 # Formal:
 #   icon: link || the description || color
 social:
-  fab fa-github: https://github.com/tangsusu || Github || '#24292e'
+  fab fa-github: https://github.com/suxilovef || Github || '#24292e'
   fas fa-envelope: mailto:sunchuanjianlmr@163.com || Email || '#4a7dbe'
 
 # --------------------------------------

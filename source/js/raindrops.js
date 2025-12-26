@@ -37,6 +37,7 @@
     this.dpr = Math.max(window.devicePixelRatio || 1, 1)
     this.drops = []
     this.splashes = []
+    this.particles = []
     this.running = false
     this.gravity = 0.15
     this.windBase = 0.6
@@ -109,6 +110,17 @@
       var mr = s.maxR !== undefined ? s.maxR : getIntensity() === 'heavy' ? 26 : 18
       if (s.alpha < 0.02 || s.r > mr) this.splashes.splice(j, 1)
     }
+    for (var k = this.particles.length - 1; k >= 0; k--) {
+      var p = this.particles[k]
+      var gf = getIntensity() === 'heavy' ? 1.4 : getIntensity() === 'light' ? 1 : 1.2
+      p.vy += this.gravity * gf
+      p.vx *= 0.985
+      p.x += p.vx
+      p.y += p.vy
+      p.alpha *= p.decay
+      p.life -= 1
+      if (p.alpha < 0.03 || p.life <= 0 || p.x < -50 || p.x > w + 50 || p.y > h + 50) this.particles.splice(k, 1)
+    }
   }
   Raindrops.prototype.draw = function () {
     var ctx = this.ctx
@@ -168,6 +180,22 @@
         ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2)
         ctx.stroke()
       }
+    }
+    for (var m = 0; m < this.particles.length; m++) {
+      var p = this.particles[m]
+      var grad = ctx.createRadialGradient(p.x, p.y, Math.max(p.r * 0.1, 0.6), p.x, p.y, p.r)
+      grad.addColorStop(0, 'rgba(215, 230, 255,' + Math.max(p.alpha * 0.9, 0) + ')')
+      grad.addColorStop(1, 'rgba(215, 230, 255, 0)')
+      ctx.fillStyle = grad
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.strokeStyle = 'rgba(220, 235, 255,' + Math.max(p.alpha * 0.6, 0) + ')'
+      ctx.lineWidth = Math.max(p.r * 0.6, 0.8)
+      ctx.beginPath()
+      ctx.moveTo(p.x, p.y)
+      ctx.lineTo(p.x - p.vx * 0.7, p.y - p.vy * 0.7)
+      ctx.stroke()
     }
     ctx.restore()
   }
@@ -246,16 +274,17 @@
     if (!window.RAINDROPS_INSTANCE) return
     if (isMobile()) return
     var level = getIntensity()
-    var g =
-      level === 'heavy'
-        ? 1.3 + Math.random() * 0.5
-        : level === 'light'
-        ? 0.8 + Math.random() * 0.4
-        : 1 + Math.random() * 0.4
-    var mr = level === 'heavy' ? 64 : level === 'light' ? 42 : 52
-    var decay = level === 'heavy' ? 0.965 : level === 'light' ? 0.97 : 0.968
-    var lw = level === 'heavy' ? 2.4 : level === 'light' ? 1.6 : 1.9
-    window.RAINDROPS_INSTANCE.splashes.push({ x: e.clientX, y: e.clientY, r: 0, alpha: 0.95, growth: g, kind: 'click', maxR: mr, decay: decay, lw: lw })
+    var cnt = level === 'heavy' ? 22 : level === 'light' ? 10 : 16
+    for (var i = 0; i < cnt; i++) {
+      var ang = -Math.PI * 0.1 - Math.random() * Math.PI * 0.8
+      var spd = level === 'heavy' ? 3.2 + Math.random() * 1.6 : level === 'light' ? 2 + Math.random() * 1.2 : 2.6 + Math.random() * 1.4
+      var vx = Math.cos(ang) * spd
+      var vy = Math.sin(ang) * spd
+      var pr = level === 'heavy' ? 2 + Math.random() * 1.2 : level === 'light' ? 1 + Math.random() * 0.8 : 1.5 + Math.random() * 1
+      var pdec = level === 'heavy' ? 0.94 : level === 'light' ? 0.92 : 0.93
+      var life = level === 'heavy' ? 42 : level === 'light' ? 26 : 34
+      window.RAINDROPS_INSTANCE.particles.push({ x: e.clientX, y: e.clientY, vx: vx, vy: vy, r: pr, alpha: 0.9, decay: pdec, life: life })
+    }
   })
 })()
 
