@@ -13,7 +13,7 @@ cover: /image/post_cover/java-mybatis-min2.svg
 
 # Mybatis
 
-## I：前言
+## （一）：前言
 
 版本：`<mybatis-plus.version>3.4.1</mybatis-plus.version>`
 
@@ -23,7 +23,7 @@ cover: /image/post_cover/java-mybatis-min2.svg
 
 备注：截取关键源码分析
 
-## II：分析
+## （二）：分析
 
 ### A-00X：全局配置文件解析
 
@@ -430,9 +430,17 @@ public <T> T getMapper(Class<T> type, SqlSession sqlSession) {
 
 ```
 
+## （三）：扩展
+
+原生JDBC开发：
+
+导入JDBC驱动包、通过DiverManager注册驱动、创建连接、创建Statement、CRUD、操作结果、关闭连接
 
 
-## III：使用
+
+
+
+## （四）：使用
 
 ### A-00X：Mybatis注解开发
 
