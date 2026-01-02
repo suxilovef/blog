@@ -41,7 +41,7 @@ code_blocks:
   theme: pale night
   macStyle: false
   # Code block height limit (unit: px)
-  height_limit: 381
+  height_limit: 200
   word_wrap: false
 
   # Toolbar
