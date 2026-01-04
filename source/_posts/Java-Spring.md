@@ -15,6 +15,14 @@ cover: /image/post_cover/spring-framework-min.svg
 
 **文档版本：GIT**：迭代
 
+# A-00X：Spring-Boot
+
+本文从SpringBoot应用程序启动流程开始分析：分析流程如下：
+
+（1）：A-001：SpringApplication：SpringApplication的构造方法与run方法，构造方法涉及应用监听器供run方法使用，run方法涉及事件发布器组合、配置环境、创建容器、准备容器、刷新容器；其中准备容器涉及初始BeanDefinition加载：参照A-002：BeanDefinitionLoader；刷新容器涉及A-003：ApplicationContext、A-005：AbstractApplicationContext
+
+
+
 # A-001：SpringApplication
 
 ## B-001：前言
@@ -786,7 +794,7 @@ public static Set<BeanDefinitionHolder> registerAnnotationConfigProcessors(
 1. 解析 @Configuration 、 @ComponentScan 、 @Import 、 @ImportResource 等
 2. 把 @Bean 方法“翻译”为真正的 BeanDefinition 注册到容器
 3. 因为它是 BeanDefinitionRegistryPostProcessor + PriorityOrdered ，所以会在 refresh 早期优先执行，确保其他后处理器运行前，配置类已经展开成完整的 bean 定义集合
-  如果你只记住一个： Spring Java Config 的核心不是“扫描到类”，而是这个处理器把配置模型编译进 BeanDefinition 图。
+    如果你只记住一个： Spring Java Config 的核心不是“扫描到类”，而是这个处理器把配置模型编译进 BeanDefinition 图。
 
 **AutowiredAnnotationBeanPostProcessor（字段/构造器/方法注入引擎）**
 
@@ -796,7 +804,7 @@ public static Set<BeanDefinitionHolder> registerAnnotationConfigProcessors(
 
 1. 处理 @Autowired 、 @Value ，以及（通常）兼容 javax.inject.Inject
 2. 发生在 Bean 实例化之后、属性填充阶段（BPP 生命周期）
-  架构视角：它把“依赖注入”从 XML/property 映射，升级为“基于注解的依赖声明”。
+    架构视角：它把“依赖注入”从 XML/property 映射，升级为“基于注解的依赖声明”。
 
 **CommonAnnotationBeanPostProcessor（JSR-250：@Resource 等）**
 
@@ -808,7 +816,7 @@ public static Set<BeanDefinitionHolder> registerAnnotationConfigProcessors(
 
 1. @Resource 按名称/类型注入
 2. @PostConstruct/@PreDestroy 生命周期回调（取决于 Spring 版本/组合的处理器，整体上 JSR-250 支持在这里被引入）
-  架构视角：这是典型的 “可选能力装配” ：根据 classpath 自动启用模块，减少硬依赖。
+    架构视角：这是典型的 “可选能力装配” ：根据 classpath 自动启用模块，减少硬依赖。
 
 **PersistenceAnnotationBeanPostProcessor（JPA：@PersistenceContext）**
 
@@ -824,15 +832,253 @@ public static Set<BeanDefinitionHolder> registerAnnotationConfigProcessors(
 
 1. EVENT_LISTENER_PROCESSOR_BEAN_NAME
 2. EVENT_LISTENER_FACTORY_BEAN_NAME
-  职责：
+    职责：
 
 3. EventListenerMethodProcessor 扫描 bean 上的 @EventListener 方法并注册为监听器
 4. DefaultEventListenerFactory 用于创建对应的监听器适配器实例
-  架构视角：这是把“事件驱动编程模型”编译进容器的一套处理链，属于典型的“声明式监听器”。
+    架构视角：这是把“事件驱动编程模型”编译进容器的一套处理链，属于典型的“声明式监听器”。
 
-**D-003：AnnotationBeanNameGenerator**
+#### **D-003：AnnotationBeanNameGenerator**
 
 TODO：FullyQualifiedAnnotationBeanNameGenerator
+
+# A-005：AbstractApplicationContext
+
+## B-001：前言
+
+## B-002：调试
+
+## B-003：源码分析
+
+### C-001：AbstractApplicationContext#refresh
+
+```java
+public void refresh() throws BeansException, IllegalStateException {
+    synchronized (this.startupShutdownMonitor) {
+        StartupStep contextRefresh = this.applicationStartup.start("spring.context.refresh");
+        prepareRefresh();
+        // BeanFactory：创建/刷新：把配置加载下沉到子类
+        ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
+        // BeanFactory：通用装配：把context能力注入到BeanFactory
+        prepareBeanFactory(beanFactory);
+        try {
+            postProcessBeanFactory(beanFactory);
+            StartupStep beanPostProcess = this.applicationStartup.start("spring.context.beans.post-process");
+            invokeBeanFactoryPostProcessors(beanFactory);
+            registerBeanPostProcessors(beanFactory);
+            beanPostProcess.end();
+            initMessageSource();
+            initApplicationEventMulticaster();
+            onRefresh();
+            registerListeners();
+            finishBeanFactoryInitialization(beanFactory);
+            finishRefresh();
+        }
+        catch (BeansException ex) {
+            if (logger.isWarnEnabled()) {
+                logger.warn("Exception encountered during context initialization - " +
+                            "cancelling refresh attempt: " + ex);
+            }
+            destroyBeans();
+            cancelRefresh(ex);
+            throw ex;
+        }
+        finally {
+            resetCommonCaches();
+            contextRefresh.end();
+        }
+    }
+}
+```
+
+#### D-001：prepareRefresh()
+
+`prepareRefresh();`
+
+**（一）定位**
+
+刷新前置阶段：处理Context自身的状态机、环境、事件系统的早期一致性，给后续操作提供稳定前提
+
+**（二）分析**
+
+```java
+protected void prepareRefresh() {
+    this.startupDate = System.currentTimeMillis();
+    // 设计：context的可用性不是由BeanFactory是否存在单点决定，而是由active/closed标志做外部可见状态，后续getBean等其它入口会依赖此标志做防御
+    this.closed.set(false);
+    this.active.set(true);
+    // 日志：定位容器刷新边界
+    if (logger.isDebugEnabled()) {
+        if (logger.isTraceEnabled()) {
+            logger.trace("Refreshing " + this);
+        }
+        else {
+            logger.debug("Refreshing " + getDisplayName());
+        }
+    }
+    // 模板方法：扩展：子类实现
+    // 因为某些 property source 在 ApplicationContext 构造时拿不到（例如 ServletContext 相关参数），只能先放一个“占位 stub”，等 refresh 时再替换为真实来源。这个机制在 Web 环境是典型用法：
+    // AbstractRefreshableWebApplicationContext.initPropertySources()
+    initPropertySources();
+    // 快速失败点：后续BeanDefinition解析、@Value等解析都依赖于环境
+    getEnvironment().validateRequiredProperties();
+    // 快照/回滚的防御性设计
+    if (this.earlyApplicationListeners == null) {
+        // 第一次refresh
+        this.earlyApplicationListeners = new LinkedHashSet<>(this.applicationListeners);
+    }
+    else {
+        // 非第一次refresh
+        this.applicationListeners.clear();
+        this.applicationListeners.addAll(this.earlyApplicationListeners);
+    }
+    // 早期事件缓冲区：事件系统未就绪也不丢事件
+    // publishEvent() 发布事件
+    // registerListeners() 回放事件
+    this.earlyApplicationEvents = new LinkedHashSet<>();
+}
+```
+
+#### D-002：prepareBeanFactory()
+
+`prepareBeanFactory()`
+
+**（一）定位**
+
+把纯BeanFactory（对象工厂）升级为承载ApplicationContext能力的运行时容器
+
+**（二）分析**
+
+```java
+protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+    // 让Bean类加载与Context的资源加载保持一致
+    beanFactory.setBeanClassLoader(getClassLoader());
+    // 让SpEL表达式在BeanDefinition解析/属性填充阶段有统一入口
+    if (!shouldIgnoreSpel) {
+        beanFactory.setBeanExpressionResolver(new StandardBeanExpressionResolver(beanFactory.getBeanClassLoader()));
+    }
+    // 注册 Resource/URL/Class 等通用类型转换（PropertyEditorRegistrar）
+    // 解决“字符串 → Resource/File/URL/URI/Class/Resource[]”等一堆基础转换，且基于 Environment 支持占位符解析
+    beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
+    // aware注入的执行者：在bean初始化前回调
+    beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
+    // TODO标识这些aware接口不要当做普通依赖按类型找bean注入，因为它们走的是生命周期回调通道BPP，不是依赖查找通道
+    beanFactory.ignoreDependencyInterface(EnvironmentAware.class);
+    beanFactory.ignoreDependencyInterface(EmbeddedValueResolverAware.class);
+    beanFactory.ignoreDependencyInterface(ResourceLoaderAware.class);
+    beanFactory.ignoreDependencyInterface(ApplicationEventPublisherAware.class);
+    beanFactory.ignoreDependencyInterface(MessageSourceAware.class);
+    beanFactory.ignoreDependencyInterface(ApplicationContextAware.class);
+    beanFactory.ignoreDependencyInterface(ApplicationStartupAware.class);
+    // 注册ResolvableDependency：让容器自身可悲@Autowired
+    // 实现机制在DefaultListableBeanFactory registerResolvableDependency findAutowireCandidates()
+    beanFactory.registerResolvableDependency(BeanFactory.class, beanFactory);
+    beanFactory.registerResolvableDependency(ResourceLoader.class, this);
+    beanFactory.registerResolvableDependency(ApplicationEventPublisher.class, this);
+    beanFactory.registerResolvableDependency(ApplicationContext.class, this);
+    // TODO：早期挂入ApplicationListenerDetector：补齐内嵌bean listener场景
+    beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(this));
+    // TODO：LoadTimeWeaver 预处理 + 临时 ClassLoader：为“类型匹配/织入”兜底
+    if (!NativeDetector.inNativeImage() && beanFactory.containsBean(LOAD_TIME_WEAVER_BEAN_NAME)) {
+        beanFactory.addBeanPostProcessor(new LoadTimeWeaverAwareProcessor(beanFactory));
+        beanFactory.setTempClassLoader(new ContextTypeMatchClassLoader(beanFactory.getBeanClassLoader()));
+    }
+    // 注册默认环境相关单例：约定名称 + 可覆盖
+    if (!beanFactory.containsLocalBean(ENVIRONMENT_BEAN_NAME)) {
+        beanFactory.registerSingleton(ENVIRONMENT_BEAN_NAME, getEnvironment());
+    }
+    if (!beanFactory.containsLocalBean(SYSTEM_PROPERTIES_BEAN_NAME)) {
+        beanFactory.registerSingleton(SYSTEM_PROPERTIES_BEAN_NAME, getEnvironment().getSystemProperties());
+    }
+    if (!beanFactory.containsLocalBean(SYSTEM_ENVIRONMENT_BEAN_NAME)) {
+        beanFactory.registerSingleton(SYSTEM_ENVIRONMENT_BEAN_NAME, getEnvironment().getSystemEnvironment());
+    }
+    if (!beanFactory.containsLocalBean(APPLICATION_STARTUP_BEAN_NAME)) {
+        beanFactory.registerSingleton(APPLICATION_STARTUP_BEAN_NAME, getApplicationStartup());
+    }
+}
+```
+
+#### D-003：postProcessBeanFactory()
+
+**（一）定位**
+
+子类实现：见A-006：AnnotationConfigServletWebServerApplicationContext
+
+#### D-004：postProcessBeanFactory()
+
+`postProcessBeanFactory`
+
+
+
+# A-006：AnnotationConfigServletWebServerApplicationContext
+
+## B-001：前言
+
+## B-002：调试
+
+## B-003：源码解析
+
+### C-001：postProcessBeanFactory()
+
+**（一）定位**
+
+1. 在BeanFactory具备基本形态之后、
+2. 早于BeanFactoryPostProcessor与BeanPostProcessor之前
+
+**（二）分析**
+
+```java
+protected void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+    super.postProcessBeanFactory(beanFactory);
+    if (this.basePackages != null && this.basePackages.length > 0) {
+        this.scanner.scan(this.basePackages);
+    }
+    if (!this.annotatedClasses.isEmpty()) {
+        this.reader.register(ClassUtils.toClassArray(this.annotatedClasses));
+    }
+}
+```
+
+1. 适合（可以）做的扩展
+   1. 向BeanFactory注入容器基础设施（scope、aware支持、忽略的依赖接口）
+   2. 向BeanFactory注入新的BeanDefinition（扫描、register配置类、动态注册）
+2. `super.postProcessBeanFactory(beanFactory)`
+   1. `ServletWebServerApplicationContext`
+   2. 注册WebApplicationContextServletContextAwareProcessor
+   3. ignoreDependencyInterface(ServletContextAware.class) ：避免把 ServletContextAware 当作“需要依赖注入的接口”去解析（这类 aware 语义由 Processor 处理，而不是走常规注入）
+   4. 注册 Web scopes（request/session 等），并保留/恢复用户自定义 scope
+3. `this.scanner.scan(this.basePackages);`
+   1. TODO
+4. `this.reader.register(ClassUtils.toClassArray(this.annotatedClasses));`
+   1. TODO
+5. 在 SpringApplication.run 的默认路径下，这里“经常不会新增任何业务 BeanDefinition”
+   1. 本类的 basePackages 、 annotatedClasses 往往是空
+   2. postProcessBeanFactory 这一段更多只体现为： super 先把 Web 语义地基建好
+   3. 真正大量 BeanDefinition（自动配置、组件扫描、配置类解析入口）通常已在 load(...) 阶段进入 registry（可参照A-001>B-003>C-002>D-004）
+
+# A-007：BeanFactoryPostProcessor
+
+## B-001：前言
+
+1. 定位
+   1. Bean工厂后处理器：对Bean定义进行修改
+2. 作用域
+   1. 容器级别，只对当前容器中的bean进行后置处理，不会对定义在另一个容器中的bean进行后置处理，即使这两个容器在同一容器中
+
+### C-001：BeanDefinitionRegistryPostProcessor
+
+**（一）定位**
+
+1. 是BeanFactoryPostProcessor的子接口
+2. 针对BeanDefinitionRegistry类型的ConfigurableListableBeanFactory，实现对BeanDefinition的增删改查等操作
+3. BeanDefinitionRegistryPostProcessor调用时机在BeanFactoryPostProcessor之前
+
+
+
+
+
+
 
 
 
