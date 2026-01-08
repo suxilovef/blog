@@ -1074,6 +1074,182 @@ protected void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactor
 2. 针对BeanDefinitionRegistry类型的ConfigurableListableBeanFactory，实现对BeanDefinition的增删改查等操作
 3. BeanDefinitionRegistryPostProcessor调用时机在BeanFactoryPostProcessor之前
 
+# A-008：ConfigurationClassPostProcessor
+
+## B-001：前言
+
+1. 定位
+   1. BeanDefinitionRegistryPostProcessor非常重要的实现，SpringBoot容器核心类
+2. 作用
+   1. 解析并保存配置类，以及解析@Component注解、@Import注解等注解为BeanDefinition保存至BeanFactory中
+3. 前置条件
+   1. SpringBoot容器启动过程中：通过SpringApplication#createApplicationConetxt创建应用上下文，一般创建AnnotationConfigServletWebServerApplicationContext作为应用上下文。在此上下文构造方法中会创建AnnotationBeanDefinitionReader。（参照A-004）在此构造方法中将一些必要Bean（如ConfigurationClassPostProcessor、AutowiredAnnotationBeanPostProcessor、CommonAnnotationBeanPostProcessor等）注入至容器中
+   2. 调用时机：invokeBeanFactoryPostProcessors
+4. 分析内容
+   1. postProcessBeanDefinitionRegistry
+   2. postProcessBeanFactory
+
+## B-002：调试
+
+## B-003：源码分析
+
+### C-001：postProcessBeanDefinitionRegistry
+
+**（一）入口**
+
+```java
+public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) {
+    // 避免registry覆写hashCode导致语义变化；这里要的是对象身份
+    // 框架级防御式编程：对外部实现（不同Registry）保持鲁棒
+    int registryId = System.identityHashCode(registry);
+    // 幂等性/一致性保护：这个后处理器对同一个registry只跑一次
+    if (this.registriesPostProcessed.contains(registryId)) {
+        // 快速失败
+        throw new IllegalStateException(
+            "postProcessBeanDefinitionRegistry already called on this post-processor against " + registry);
+    }
+    // 保护调用顺序：如果已经走过postProcessBeanFactory，不可修改registry
+    if (this.factoriesPostProcessed.contains(registryId)) {
+        // 快速失败
+        throw new IllegalStateException(
+            "postProcessBeanFactory already called on this post-processor against " + registry);
+    }
+    // 记录已处理
+    this.registriesPostProcessed.add(registryId);
+    // 复杂度下沉
+    // 架构分层：生命周期钩子层-》领域流程层（解析/建模/注册）
+    processConfigBeanDefinitions(registry);
+}
+```
+
+**（二）解析注解并把BeanDefinition加到容器真实流程**
+
+1. 找出配置类候选（ @Configuration 、或“lite”配置候选）
+2. 用 ASM/Metadata 解析它们，构建 ConfigurationClass 模型
+3. 读模型，把 @Bean 、 @Import 、 @ImportResource 、 ImportBeanDefinitionRegistrar 等转成 BeanDefinition 并注册到 registry
+4. 因为注册过程中可能引入新的配置类候选，循环直到收敛
+
+```java
+public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
+    List<BeanDefinitionHolder> configCandidates = new ArrayList<>();
+    // 获取当前registry已有的所有BeanDefinition名称
+    String[] candidateNames = registry.getBeanDefinitionNames();
+    // 循环遍历
+    for (String beanName : candidateNames) {
+        BeanDefinition beanDef = registry.getBeanDefinition(beanName);
+        // 如果已标记，处理过，跳过
+        if (beanDef.getAttribute(ConfigurationClassUtils.CONFIGURATION_CLASS_ATTRIBUTE) != null) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Bean definition has already been processed as a configuration class: " + beanDef);
+            }
+        }
+        else if (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, this.metadataReaderFactory)) {
+            // 判断是不是配置类候选（包含full/lite）两类候选的判断逻辑
+            // 配置类解析并不要求你一定显式写 @Configuration 。很多“组件类 + @Bean 方法”会走 lite 路径（Spring 会用属性标记区分 full / lite，后面增强阶段只增强 full）。
+            configCandidates.add(new BeanDefinitionHolder(beanDef, beanName));
+        }
+    }
+    if (configCandidates.isEmpty()) {
+        return;
+    }
+    // 按@Order排序
+    // 先处理order更高的配置类：影响：@Import的覆盖/顺序,@Bean命名冲突、别名等边界行为
+    // 本质是配置建模的确定性设计：尽可能把结果稳定下来
+    configCandidates.sort((bd1, bd2) -> {
+        int i1 = ConfigurationClassUtils.getOrder(bd1.getBeanDefinition());
+        int i2 = ConfigurationClassUtils.getOrder(bd2.getBeanDefinition());
+        return Integer.compare(i1, i2);
+    });
+    // TODO 这里registry是否单例影响什么？
+    SingletonBeanRegistry sbr = null;
+    if (registry instanceof SingletonBeanRegistry) {
+        sbr = (SingletonBeanRegistry) registry;
+        if (!this.localBeanNameGeneratorSet) {
+            // 尝试从单例池中获取CONFIGURATION_BEAN_NAME_GENERATOR
+            // 跨组件共享策略对象的做法：应用上下文层面可统一控制bean命名策略
+            BeanNameGenerator generator = (BeanNameGenerator) sbr.getSingleton(
+                AnnotationConfigUtils.CONFIGURATION_BEAN_NAME_GENERATOR);
+            if (generator != null) {
+                // 扫描组件默认短名
+                this.componentScanBeanNameGenerator = generator;
+                // import配置默认全限定名
+                this.importBeanNameGenerator = generator;
+                // 架构层关键的冲突域隔离：降低BeanDefinition名称冲突概率
+            }
+        }
+    }
+
+    if (this.environment == null) {
+        this.environment = new StandardEnvironment();
+    }
+    // 构造注入 ASM 读 class 文件的注解/方法元数据（避免反射/避免提前加载类）、校验错误直接 fail-fast、占位符解析、@Conditional 判断等、扫描/资源加载
+    // parser 不是纯解析器，它会对 @ComponentScan 做“即时注册”
+    ConfigurationClassParser parser = new ConfigurationClassParser(
+        this.metadataReaderFactory, this.problemReporter, this.environment,
+        this.resourceLoader, this.componentScanBeanNameGenerator, registry);
+    // 固定点迭代
+    // 初始candidates：一开始发现的配置类集合
+    Set<BeanDefinitionHolder> candidates = new LinkedHashSet<>(configCandidates);
+    Set<ConfigurationClass> alreadyParsed = new HashSet<>(configCandidates.size());
+    // do-while循环
+    do {
+        StartupStep processConfig = this.applicationStartup.start("spring.context.config-classes.parse");
+        parser.parse(candidates);
+        parser.validate();
+        // 拿到新构建的ConfigurationClass模型集合
+        Set<ConfigurationClass> configClasses = new LinkedHashSet<>(parser.getConfigurationClasses());
+        // 剔除已解析的
+        configClasses.removeAll(alreadyParsed);
+
+        if (this.reader == null) {
+            this.reader = new ConfigurationClassBeanDefinitionReader(
+                registry, this.sourceExtractor, this.resourceLoader, this.environment,
+                this.importBeanNameGenerator, parser.getImportRegistry());
+        }
+        // 把模型落地为BeanDefinition注册进registry
+        this.reader.loadBeanDefinitions(configClasses);
+        alreadyParsed.addAll(configClasses);
+        processConfig.tag("classCount", () -> String.valueOf(configClasses.size())).end();
+
+        candidates.clear();
+        // 如果registry的定义数量变多了，找出新增的那些定义里有没有新的配置类候选，把他们加入下一轮candidates
+        if (registry.getBeanDefinitionCount() > candidateNames.length) {
+            String[] newCandidateNames = registry.getBeanDefinitionNames();
+            Set<String> oldCandidateNames = new HashSet<>(Arrays.asList(candidateNames));
+            Set<String> alreadyParsedClasses = new HashSet<>();
+            for (ConfigurationClass configurationClass : alreadyParsed) {
+                alreadyParsedClasses.add(configurationClass.getMetadata().getClassName());
+            }
+            for (String candidateName : newCandidateNames) {
+                if (!oldCandidateNames.contains(candidateName)) {
+                    BeanDefinition bd = registry.getBeanDefinition(candidateName);
+                    if (ConfigurationClassUtils.checkConfigurationClassCandidate(bd, this.metadataReaderFactory) &&
+                        !alreadyParsedClasses.contains(bd.getBeanClassName())) {
+                        candidates.add(new BeanDefinitionHolder(bd, candidateName));
+                    }
+                }
+            }
+            candidateNames = newCandidateNames;
+        }
+    }
+    // 直到candidates为空，收敛完成
+    while (!candidates.isEmpty());
+
+    // Register the ImportRegistry as a bean in order to support ImportAware @Configuration classes
+    if (sbr != null && !sbr.containsSingleton(IMPORT_REGISTRY_BEAN_NAME)) {
+        sbr.registerSingleton(IMPORT_REGISTRY_BEAN_NAME, parser.getImportRegistry());
+    }
+
+    if (this.metadataReaderFactory instanceof CachingMetadataReaderFactory) {
+        // Clear cache in externally provided MetadataReaderFactory; this is a no-op
+        // for a shared cache since it'll be cleared by the ApplicationContext.
+        ((CachingMetadataReaderFactory) this.metadataReaderFactory).clearCache();
+    }
+}
+```
+
+
+
 
 
 
