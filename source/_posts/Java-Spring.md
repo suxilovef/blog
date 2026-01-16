@@ -1248,7 +1248,181 @@ public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
 }
 ```
 
+#### D-001：checkConfigurationClassCandidate
 
+**checkConfigurationClassCandidate**
+
+```java
+public static boolean checkConfigurationClassCandidate(
+    BeanDefinition beanDef, MetadataReaderFactory metadataReaderFactory) {
+    // 先排除不可能成为配置类候选的定义
+    String className = beanDef.getBeanClassName();
+    // 没有明确的类名，无法做注解元数据判断
+    // 工厂方法创建的BeanDefinition，不是配置类本体，不应该再被当做配置类去解析
+    if (className == null || beanDef.getFactoryMethodName() != null) {
+        return false;
+    }
+    // 以最小代价拿到AnnotationMetadata
+    // 复用已存在的元数据
+    AnnotationMetadata metadata;
+    // 如果beanDef本身是AnnotationedBeanDefinition，并且metadata的类名与beanClassName一致，则直接复用。
+    // 典型来源：组件扫描得到的ScannedGenericBeanDefinition、通过AnnotateBeanDefinitionReader注册的定义
+    if (beanDef instanceof AnnotatedBeanDefinition &&
+        className.equals(((AnnotatedBeanDefinition) beanDef).getMetadata().getClassName())) {
+        metadata = ((AnnotatedBeanDefinition) beanDef).getMetadata();
+    }
+    else if (beanDef instanceof AbstractBeanDefinition && ((AbstractBeanDefinition) beanDef).hasBeanClass()) {
+        Class<?> beanClass = ((AbstractBeanDefinition) beanDef).getBeanClass();
+        // 先做一组框架基础设施类型排除：BFPP、BPP、AOP基础设施、EventListenerFactory直接返回false
+        if (BeanFactoryPostProcessor.class.isAssignableFrom(beanClass) ||
+            BeanPostProcessor.class.isAssignableFrom(beanClass) ||
+            AopInfrastructureBean.class.isAssignableFrom(beanClass) ||
+            EventListenerFactory.class.isAssignableFrom(beanClass)) {
+            return false;
+        }
+        metadata = AnnotationMetadata.introspect(beanClass);
+    }
+    else {
+        // 默认走ASM读取class文件
+        // 这是Spring配置解析能启动早、加载轻的关键；大量场景下并不需要把配置类真正load进JVM才能决定解析策略
+        try {
+            MetadataReader metadataReader = metadataReaderFactory.getMetadataReader(className);
+            metadata = metadataReader.getAnnotationMetadata();
+        }
+        catch (IOException ex) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Could not find class file for introspecting configuration annotations: " +
+                             className, ex);
+            }
+            return false;
+        }
+    }
+    // 判定FULL还是LITE
+    // FULL：类上有@Configuration且proxyBeanMethods不是false
+    // FULL：后续会被ConfigurationClassEnhancer做CGLIB增强，以保证@Bean方法之间互相调用时仍走容器单例语义
+    Map<String, Object> config = metadata.getAnnotationAttributes(Configuration.class.getName());
+    if (config != null && !Boolean.FALSE.equals(config.get("proxyBeanMethods"))) {
+        beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
+    }
+    // 类上有@Configuration且proxyBeanMethods=false
+    // 满足isConfigurationCandidate(metadata)
+    // 排除接口。只要类上出现了任一指示性注解就认为是候选：@Component、@ComponentScan、@Import、@ImportResource
+    // 否则再看有没有@Bean方法
+    // LITE：仍会进入配置类解析（解析@Bean/@Import/@ComponentScan）但是不会走FULL那套强代理语义
+    else if (config != null || isConfigurationCandidate(metadata)) {
+        beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);
+    }
+    else {
+        return false;
+    }
+    // 附带提取@Order并打标
+    Integer order = getOrder(metadata);
+    if (order != null) {
+        beanDef.setAttribute(ORDER_ATTRIBUTE, order);
+    }
+
+    return true;
+}
+```
+
+#### D-002：parser.parse()
+
+把候选配置类BeanDefinition集合解析成一批ConfigurationClass模型，并在解析的过程中递归展开@ComponentScan/@Import等带来的新增配置源，建模阶段，下一步reader.loadBeanDefinitions(...)才是把模型落地注册BeanDefinition
+
+```java
+public void parse(Set<BeanDefinitionHolder> configCandidates) {
+    for (BeanDefinitionHolder holder : configCandidates) {
+        BeanDefinition bd = holder.getBeanDefinition();
+        try {
+            // AnnotatedBeanDefinition 分支 ：直接复用已解析的 AnnotationMetadata （扫描/annotated 注册时就解析过），成本最低
+            if (bd instanceof AnnotatedBeanDefinition) {
+                parse(((AnnotatedBeanDefinition) bd).getMetadata(), holder.getBeanName());
+            }
+            // 已持有 Class 分支 ：如果 BeanDefinition 已经绑定了 Class<?> ，就用它（可能发生在某些显式注册/提前解析场景）
+            else if (bd instanceof AbstractBeanDefinition && ((AbstractBeanDefinition) bd).hasBeanClass()) {
+                parse(((AbstractBeanDefinition) bd).getBeanClass(), holder.getBeanName());
+            }
+            // className 分支 ：用 ASM 读取 class 文件的 metadata（最常见，也是 Spring 启动期优化关键）
+            else {
+                parse(bd.getBeanClassName(), holder.getBeanName());
+            }
+        }
+        catch (BeanDefinitionStoreException ex) {
+            throw ex;
+        }
+        catch (Throwable ex) {
+            throw new BeanDefinitionStoreException(
+                "Failed to parse configuration class [" + bd.getBeanClassName() + "]", ex);
+        }
+    }
+    // 处理DeferredImportSelector
+    this.deferredImportSelectorHandler.process();
+}
+```
+
+# A-00X：FactoryBean
+
+## B-001：前言
+
+1. 设计缘由：为什么Spring需要“Bean的工厂”这种一级概念
+
+   1. 把复杂构建逻辑纳入容器治理
+      1. 很多对象不是new一下就完事：可能需要读取外部配置、做连接、生成动态代理、加载本地/远程资源、组合多段初始化。
+      2. FactoryBean就是把构建过程本身包装成一个Bean，让容器可以管理它
+   2. 支持框架级基础设施：AOP/代理/适配外部资源
+      1. Spring内部大量使用它来暴露代理对象（例如AOP的ProxyFactoryBean），以及把JNDI（TODO）等外部资源伪装成Bean
+      2. 这类对象往往在运行期才能确定真实类型或实例状态，“普通Bean定义”难以表达
+   3. 在不破坏容器语义的情况下引入“二次解引用”
+      1. 容器里注册的是FactoryBean，但注入/获取到的默认是它生产的对象（产品）。这种透明替换让用户把它当做普通Bean使用，框架却能在底层做增强与适配
+
+2. 核心契约
+
+   1. `T getObject()`：把产品的创建权交给扩展点
+      1. 容器不要求你怎么创建，但要求你在必要时抛出未初始化异常或返回null
+      2. 容器承认有些对象的就绪条件不由容器完全掌控
+   2. `Class<?> getObjectType()`：在不创建实例的前提下提供类型元数据
+      1. Spring做自动装配、类型匹配、候选筛选的时候，必须尽量避免提前实例化
+      2. 这是“元数据优先”的设计：先靠元数据完成依赖图推到，再决定是否实例化
+   3. `boolean isSingleton()`：把“缓存/复用策略”显示化
+      1. 把生命周期/缓存语义上移到契约层，从而让容器可做全局一致的优化与并发控制
+
+3. 容器只管理FactoryBean，不管理产品对象
+
+   1. 容器只负责FactoryBean实例的生命周期，不负责它创建的对象的生命周期；如果产品需要关闭/销毁，要FactoryBean自己实现DisposableBean去代理关闭
+   2. 责任边界设计
+      1. 容器无法通用地理解你创建的任何对象该如何销毁（可能是连接、线程池、native资源、远程句柄）
+      2. 但容器可以要求：谁创建谁负责善后（FactoryBean作为创建者，承担销毁代理责任）
+
+4. 不要依赖注解注入/反射设施，而要编程式获取依赖
+
+   1. FactoryBean经常位于基础设施层的启动链路上（例如代理创建、Bean定义增强）
+   2. TODO：因此Spring倾向让它实现BeanFactoryAware，用最原始、最可控的方式获取依赖，降低启动阶段耦合与不确定性
+   3. 越底层的组件，越要减少隐式魔法与隐式时序依赖
+
+5. OBJECT_TYPE_ATTRIBUTE ：用“可外置的元数据”解决类型不可推导问题
+
+   当工厂的产品类型无法从 FactoryBean 类本身推断时，Spring 允许在 BeanDefinition 上设置一个属性来声明产品类型（常量： FactoryBean.java:L67-L75 ）
+
+   1. 类型信息是容器做依赖解析的关键输入。
+   2. 当“代码推导”不可靠时，允许“配置显式声明”补齐元数据。
+   3. 这体现了 Spring 的一贯策略： 运行时能力（反射/动态）再强，也要给出可确定的元数据通道 ，让系统可预测、可诊断。
+
+6. FactoryBean 是一种“容器内的抽象工厂 + 透明代理”
+
+   1. 普通 Bean：容器管理“对象实例”
+   2. FactoryBean：容器管理“对象工厂”，并默认把“工厂的产品”当作依赖注入目标
+     这带来三类架构能力：
+     1. 封装复杂创建 ：把复杂度收敛在基础设施层，而不是散落在业务代码里。
+
+     2. 支持动态形态 ：代理、装饰器、延迟初始化、按环境切换实现。
+     3. 保持依赖稳定 ：上层依赖面向接口/类型与 Bean 名称，不关心底层是直连对象还是代理/适配结果。
+        如果你把 Spring 当作一个“运行时组件装配平台”，那 FactoryBean 就是它最关键的“平台扩展点”之一：让平台可以生产平台自身需要的基础设施对象。
+
+7. 扩展SmartFactoryBean
+
+## B-002：调试
+
+## B-003：源码解析
 
 
 

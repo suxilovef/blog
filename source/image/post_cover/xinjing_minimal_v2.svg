@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="ricePaper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7f4ec"/>
+      <stop offset="1" stop-color="#ebe8de"/>
+    </linearGradient>
+    <filter id="paperGrain" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="gamma" amplitude="0.12" exponent="1"/>
+      </feComponentTransfer>
+    </filter>
+    <filter id="inkBleed" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#ricePaper)"/>
+  <rect width="1200" height="630" filter="url(#paperGrain)" opacity="0.18"/>
+  <path d="M80 420 C 200 360, 360 380, 520 420 S 840 480, 1120 440" fill="none" stroke="#1a1a1a" stroke-width="3" opacity="0.25" filter="url(#inkBleed)"/>
+  <path d="M120 470 C 260 430, 420 460, 580 480 S 900 500, 1090 480" fill="none" stroke="#1a1a1a" stroke-width="2" opacity="0.22" filter="url(#inkBleed)"/>
+  <path d="M90 510 C 240 500, 420 520, 610 525 S 920 520, 1140 530" fill="none" stroke="#1a1a1a" stroke-width="1.6" opacity="0.18" filter="url(#inkBleed)"/>
+  <g font-family="'Noto Serif SC','STSong','SimSun','KaiTi','Microsoft YaHei',serif" fill="#1a1a1a">
+    <text x="600" y="250" font-size="164" text-anchor="middle" letter-spacing="8">心经</text>
+  </g>
+  <circle cx="1040" cy="476" r="32" fill="#a0171c" opacity="0.9"/>
+  <g font-family="'Noto Serif SC','STSong','SimSun','KaiTi','Microsoft YaHei',serif" fill="#f6f2ee">
+    
+  </g>
+</svg>
